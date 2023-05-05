@@ -1,30 +1,39 @@
 #!/usr/bin/python3
 """
-Fabric script based on the file 1-pack_web_static.py that distributes an
-archive to the web servers
+Fabric script to distribute an archive to your web servers
 """
-
-from fabric.api import put, run, env
+from fabric.api import env, put, run
 from os.path import exists
-env.hosts = ['142.44.167.228', '144.217.246.195']
+import os.path
+import re
+
+
+env.hosts = ['54.242.191.75', '100.26.212.141']
 
 
 def do_deploy(archive_path):
-    """distributes an archive to the web servers"""
-    if exists(archive_path) is False:
+    """
+    Deploy the web static files
+    """
+    if not os.path.exists(archive_path):
         return False
     try:
-        file_n = archive_path.split("/")[-1]
-        no_ext = file_n.split(".")[0]
-        path = "/data/web_static/releases/"
-        put(archive_path, '/tmp/')
-        run('mkdir -p {}{}/'.format(path, no_ext))
-        run('tar -xzf /tmp/{} -C {}{}/'.format(file_n, path, no_ext))
-        run('rm /tmp/{}'.format(file_n))
-        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, no_ext))
-        run('rm -rf {}{}/web_static'.format(path, no_ext))
-        run('rm -rf /data/web_static/current')
-        run('ln -s {}{}/ /data/web_static/current'.format(path, no_ext))
+        put(archive_path, "/tmp/")
+        file_name = archive_path.split("/")[-1]
+        folder_name = re.sub('.tgz$', '', file_name)
+        run("sudo mkdir -p /data/web_static/releases/{}".format(folder_name))
+        run("sudo tar -xzf /tmp/{} -C /data/web_static/releases/{}/"
+            .format(file_name, folder_name))
+        run("sudo rm /tmp/{}".format(file_name))
+        run("sudo mv /data/web_static/releases/{}/web_static/* "
+            "/data/web_static/releases/{}/".format(folder_name, folder_name))
+        run("sudo rm -rf /data/web_static/releases/{}/web_static"
+            .format(folder_name))
+        run("sudo rm -rf /data/web_static/current")
+        run("sudo ln -s /data/web_static/releases/{}/ "
+            "/data/web_static/current".format(folder_name))
         return True
-    except:
+    except Exception as e:
+        print("Error: {}".format(e))
         return False
+
